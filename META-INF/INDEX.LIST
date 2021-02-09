@@ -1,0 +1,21 @@
+JarIndex-Version: 1.0
+
+dremio-s3-plugin-13.0.0-202101272034330307-20fb9275.jar
+META-INF
+META-INF/maven
+META-INF/maven/com.dremio.plugins
+META-INF/maven/com.dremio.plugins/dremio-s3-plugin
+com
+com/dremio
+com/dremio/plugins
+com/dremio/plugins/s3
+com/dremio/plugins/s3/store
+com/dremio/plugins/util
+org
+org/apache
+org/apache/hadoop
+org/apache/hadoop/fs
+git.properties
+s3-layout.json
+sabot-module.conf
+

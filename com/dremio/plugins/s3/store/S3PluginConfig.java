@@ -1,0 +1,177 @@
+package com.dremio.plugins.s3.store;
+
+import com.dremio.exec.catalog.StoragePluginId;
+import com.dremio.exec.catalog.conf.AWSAuthenticationType;
+import com.dremio.exec.catalog.conf.DisplayMetadata;
+import com.dremio.exec.catalog.conf.NotMetadataImpacting;
+import com.dremio.exec.catalog.conf.Property;
+import com.dremio.exec.catalog.conf.Secret;
+import com.dremio.exec.catalog.conf.SourceType;
+import com.dremio.exec.server.SabotContext;
+import com.dremio.exec.store.dfs.CacheProperties;
+import com.dremio.exec.store.dfs.FileSystemConf;
+import com.dremio.exec.store.dfs.SchemaMutability;
+import com.dremio.exec.store.dfs.FileSystemConf.CloudFileSystemScheme;
+import com.dremio.io.file.Path;
+import com.dremio.options.OptionManager;
+import io.protostuff.Tag;
+import java.util.List;
+import javax.inject.Provider;
+import javax.validation.constraints.Max;
+import javax.validation.constraints.Min;
+
+@SourceType(
+   value = "S3",
+   label = "Amazon S3",
+   uiConfig = "s3-layout.json"
+)
+public class S3PluginConfig extends FileSystemConf<S3PluginConfig, S3StoragePlugin> {
+   @Tag(1)
+   @DisplayMetadata(
+      label = "AWS Access Key"
+   )
+   public String accessKey = "";
+   @Tag(2)
+   @Secret
+   @DisplayMetadata(
+      label = "AWS Access Secret"
+   )
+   public String accessSecret = "";
+   @Tag(3)
+   @NotMetadataImpacting
+   @DisplayMetadata(
+      label = "Encrypt connection"
+   )
+   public boolean secure;
+   @Tag(4)
+   @DisplayMetadata(
+      label = "Buckets"
+   )
+   public List<String> externalBucketList;
+   @Tag(5)
+   @DisplayMetadata(
+      label = "Connection Properties"
+   )
+   public List<Property> propertyList;
+   @Tag(6)
+   @NotMetadataImpacting
+   @DisplayMetadata(
+      label = "Enable exports into the source (CTAS and DROP)"
+   )
+   public boolean allowCreateDrop;
+   @Tag(7)
+   @DisplayMetadata(
+      label = "Root Path"
+   )
+   public String rootPath = "/";
+   @Tag(8)
+   public AWSAuthenticationType credentialType;
+   @Tag(9)
+   @NotMetadataImpacting
+   @DisplayMetadata(
+      label = "Enable asynchronous access when possible"
+   )
+   public boolean enableAsync;
+   @Tag(10)
+   @DisplayMetadata(
+      label = "Enable compatibility mode (experimental)"
+   )
+   public boolean compatibilityMode;
+   @Tag(11)
+   @NotMetadataImpacting
+   @DisplayMetadata(
+      label = "Enable local caching when possible"
+   )
+   public boolean isCachingEnabled;
+   @Tag(12)
+   @NotMetadataImpacting
+   @Min(
+      value = 1L,
+      message = "Max percent of total available cache space must be between 1 and 100"
+   )
+   @Max(
+      value = 100L,
+      message = "Max percent of total available cache space must be between 1 and 100"
+   )
+   @DisplayMetadata(
+      label = "Max percent of total available cache space to use when possible"
+   )
+   public int maxCacheSpacePct;
+   @Tag(13)
+   @DisplayMetadata(
+      label = "Whitelisted buckets"
+   )
+   public List<String> whitelistedBuckets;
+   @Tag(15)
+   @DisplayMetadata(
+      label = "IAM Role to Assume"
+   )
+   public String assumedRoleARN;
+   @Tag(16)
+   @DisplayMetadata(
+      label = "Server side encryption key ARN"
+   )
+   @NotMetadataImpacting
+   public String kmsKeyARN;
+   @Tag(17)
+   @DisplayMetadata(
+      label = "Apply requester-pays to S3 requests"
+   )
+   public boolean requesterPays;
+   @Tag(18)
+   @NotMetadataImpacting
+   @DisplayMetadata(
+      label = "Enable file status check"
+   )
+   public boolean enableFileStatusCheck;
+
+   public S3PluginConfig() {
+      this.credentialType = AWSAuthenticationType.ACCESS_KEY;
+      this.enableAsync = true;
+      this.compatibilityMode = false;
+      this.isCachingEnabled = true;
+      this.maxCacheSpacePct = 100;
+      this.requesterPays = false;
+      this.enableFileStatusCheck = true;
+   }
+
+   public S3StoragePlugin newPlugin(SabotContext context, String name, Provider<StoragePluginId> pluginIdProvider) {
+      return new S3StoragePlugin(this, context, name, pluginIdProvider);
+   }
+
+   public Path getPath() {
+      return Path.of(this.rootPath);
+   }
+
+   public boolean isImpersonationEnabled() {
+      return false;
+   }
+
+   public String getConnection() {
+      return CloudFileSystemScheme.S3_FILE_SYSTEM_SCHEME.getScheme() + ":///";
+   }
+
+   public SchemaMutability getSchemaMutability() {
+      return this.allowCreateDrop ? SchemaMutability.USER_TABLE : SchemaMutability.NONE;
+   }
+
+   public List<Property> getProperties() {
+      return this.propertyList;
+   }
+
+   public boolean isAsyncEnabled() {
+      return this.enableAsync;
+   }
+
+   public CacheProperties getCacheProperties() {
+      return new CacheProperties() {
+         public boolean isCachingEnabled(OptionManager optionManager) {
+            return S3PluginConfig.this.isCachingEnabled;
+         }
+
+         public int cacheMaxSpaceLimitPct() {
+            return S3PluginConfig.this.maxCacheSpacePct;
+         }
+      };
+   }
+}
